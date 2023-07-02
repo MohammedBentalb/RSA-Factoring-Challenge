@@ -1,43 +1,61 @@
 #!/usr/bin/python3
+from random import randint
 
-import sys
 
-def factorize(value):
-    i = 2
-    factors = []
-    
-    if value < 2:
-        return factors
-    
-    while i * i <= value:
-        if value % i == 0:
-            value //= i
-            factors.append((i, value))
-            break
-        else:
+def gcd(a, b):
+    while b:
+        a, b = b, a % b
+    return a
+
+
+def _pollard_brent(c, n, x):
+    y = (x ** 2) % n + c
+    if y >= n:
+        y -= n
+
+    assert 0 <= y < n
+    return y
+
+
+def factorise_b(n, iterations=None):
+    y, c, m = (randint(1, n - 1) for w in range(3))
+    r, q, g = 1, 1, 1
+    i = 0
+    while g == 1:
+        x = y
+        for w in range(r):
+            y = _pollard_brent(c, n, y)
+        k = 0
+        while k < r and g == 1:
+            ys = y
+            for _ in range(min(m, r - k)):
+                y = _pollard_brent(c, n, y)
+                q = (q * abs(x - y)) %  n
+            g = gcd(q, n)
+            k += m
+        r *= 2
+        if iterations:
             i += 1
-    
-    if value > 1:
-        factors.append((value, 1))
-    
-    return factors
+            if i == iterations:
+                return None
+
+    if g == n:
+        while True:
+            ys = _pollard_brent(c, n, ys)
+            g = gcd(abs(x - ys), n)
+            if g > 1:
+                break
+    return g
 
 
-if len(sys.argv) != 2:
-    sys.exit()
+if __name__ == '__main__':
+    from sys import argv
 
-try:
-    with open(sys.argv[1]) as file:
-        lines = file.readlines()
+    if len(argv) != 2:
+        exit(1)
 
-        for line in lines:
-            value = int(line.strip())
-            results = factorize(value)
-
-            if len(results) > 0:
-                p, q = results[0]
-                print("{}={}*{}".format(value, p, q))
-
-except Exception as e:
-    sys.exit()
-
+    with open(argv[1], "r") as f:
+        for i in f:
+            n = int(i[:-1])
+            res = factorise_b(n)
+            print("{}={}*{}".format(n, n // res, res))
